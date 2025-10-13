@@ -19,15 +19,20 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
   const parseEndpoint = (endpoint) => {
     const filters = {};
     
+    // Check for anime endpoints first
+    if (endpoint.includes('anime-')) {
+      filters.isAnime = true;
+    }
+    
     if (endpoint.includes('country-') && endpoint.includes('genre-')) {
       const countryMatch = endpoint.match(/country-([A-Z]{2})/);
       const genreMatch = endpoint.match(/genre-(\d+)/);
       if (countryMatch) filters.country = countryMatch[1];
       if (genreMatch) filters.genre = genreMatch[1];
-    } else if (endpoint.startsWith('country-')) {
+    } else if (endpoint.includes('country-')) {
       const countryMatch = endpoint.match(/country-([A-Z]{2})/);
       if (countryMatch) filters.country = countryMatch[1];
-    } else if (endpoint.startsWith('genre-')) {
+    } else if (endpoint.includes('genre-')) {
       const genreMatch = endpoint.match(/genre-(\d+)/);
       if (genreMatch) filters.genre = genreMatch[1];
     }
@@ -81,15 +86,41 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
         
         url = `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=en-US&with_genres=16&with_origin_country=JP&with_original_language=ja&primary_release_date.gte=${thirtyDaysAgo.toISOString().split('T')[0]}&primary_release_date.lte=${thirtyDaysFromNow.toISOString().split('T')[0]}&sort_by=popularity.desc&page=${page}`;
       }
-      // Handle combined country + genre filtering
+      // Handle anime with genre filter
+      else if (endpoint.startsWith('anime-genre-')) {
+        const genreMatch = endpoint.match(/anime-genre-(\d+)/);
+        if (genreMatch) {
+          const genreId = genreMatch[1];
+          url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_genres=${genreId}&with_origin_country=JP&with_original_language=ja&sort_by=popularity.desc&page=${page}`;
+        }
+      }
+      // Handle anime with country filter
+      else if (endpoint.startsWith('anime-country-') && !endpoint.includes('genre-')) {
+        const countryMatch = endpoint.match(/anime-country-([A-Z]{2})/);
+        if (countryMatch) {
+          const countryCode = countryMatch[1];
+          url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_genres=16&with_origin_country=${countryCode}&with_original_language=ja&sort_by=popularity.desc&page=${page}`;
+        }
+      }
+      // Handle anime with country + genre filter
+      else if (endpoint.startsWith('anime-country-') && endpoint.includes('genre-')) {
+        const countryMatch = endpoint.match(/anime-country-([A-Z]{2})/);
+        const genreMatch = endpoint.match(/genre-(\d+)/);
+        if (countryMatch && genreMatch) {
+          const countryCode = countryMatch[1];
+          const genreId = genreMatch[1];
+          url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_genres=${genreId}&with_origin_country=${countryCode}&with_original_language=ja&sort_by=popularity.desc&page=${page}`;
+        }
+      }
+      // Handle combined country + genre filtering (non-anime)
       else if (filters.country && filters.genre) {
         url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_origin_country=${filters.country}&with_genres=${filters.genre}&page=${page}&sort_by=popularity.desc`;
       }
-      // Handle genre filtering
+      // Handle genre filtering (non-anime)
       else if (filters.genre) {
         url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_genres=${filters.genre}&page=${page}&sort_by=popularity.desc`;
       } 
-      // Handle country filtering
+      // Handle country filtering (non-anime)
       else if (filters.country) {
         url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_origin_country=${filters.country}&page=${page}&sort_by=popularity.desc`;
       } 
