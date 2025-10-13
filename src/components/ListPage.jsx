@@ -60,7 +60,15 @@ export const ListPage = ({
 
             <Row gutter={[16, 16]}>
               {items.map((item) => (
-                <Col key={`${item.id}-${items.indexOf(item)}`} xs={24} sm={12} md={8} lg={6} xl={4}>
+                <Col 
+                  key={`${item.id}-${items.indexOf(item)}`} 
+                  xs={24} 
+                  sm={12} 
+                  md={8} 
+                  lg={6} 
+                  xl={4}
+                  id={`movie-item-${item.id}`}
+                >
                   <ContentCard 
                     item={item} 
                     contentType={contentType}
