@@ -44,6 +44,18 @@ const HomePage = () => {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [filteredResults, setFilteredResults] = useState(null);
 
+  // Save and restore scroll position
+  useEffect(() => {
+    // Restore scroll position when coming back from detail page
+    const savedScrollPosition = sessionStorage.getItem('homeScrollPosition');
+    if (savedScrollPosition && location.state?.fromDetail) {
+      setTimeout(() => {
+        window.scrollTo(0, parseInt(savedScrollPosition));
+        sessionStorage.removeItem('homeScrollPosition');
+      }, 100);
+    }
+  }, [location.state]);
+
   // Load recently watched from localStorage
   const loadRecentlyWatched = async () => {
     try {
@@ -325,6 +337,9 @@ const HomePage = () => {
   const handleItemClick = (id, mediaType) => {
     const type = mediaType || 'movie';
     
+    // Save current scroll position
+    sessionStorage.setItem('homeScrollPosition', window.scrollY.toString());
+    
     // Build URL with current state
     const params = new URLSearchParams();
     if (searchTerm) params.set('query', searchTerm);
@@ -561,7 +576,6 @@ const HomePage = () => {
 
   const UpcomingBanner = ({ items, type, title }) => {
     if (!items || items.length === 0) return null;
-    if (window.innerWidth <= 768) return null;
     
     return (
       <div style={{ 

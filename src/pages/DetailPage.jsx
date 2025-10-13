@@ -1,6 +1,6 @@
 // DetailPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Spin, Modal, Button, Typography, Empty, Select, Card, Row, Col, Badge } from 'antd';
 import { GlobalOutlined, FullscreenOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import Navbar from '../components/Navbar';
@@ -15,6 +15,7 @@ const { Option } = Select;
 const DetailPage = () => {
   const { type, id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const iframeRef = useRef(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -211,39 +212,47 @@ const DetailPage = () => {
       const mobile = window.innerWidth <= 768;
       const landscape = window.innerHeight < window.innerWidth;
       
-      setIsMobile(mobile);
-      setIsLandscape(landscape);
-    };
-
-    const handleOrientationChange = (e) => {
-      e.preventDefault();
-      handleResize();
+      // Only update state if values actually changed to prevent unnecessary re-renders
+      setIsMobile(prev => prev !== mobile ? mobile : prev);
+      setIsLandscape(prev => prev !== landscape ? landscape : prev);
     };
 
     window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleOrientationChange);
     
     return () => {
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleOrientationChange);
     };
   }, []);
 
-  // Smart back navigation based on content type
+  // Smart back navigation with scroll restoration
   const handleBack = () => {
-    // Check if content type is anime (genre 16 is Animation)
-    const isAnime = selectedItem?.genres?.some(g => g.id === 16);
-    
-    if (type === 'movie') {
-      navigate('/movies');
-    } else if (type === 'tv') {
-      if (isAnime) {
-        navigate('/anime');
-      } else {
-        navigate('/tv-shows');
-      }
+    // If we have state from previous page, navigate back with fromDetail flag
+    if (location.state?.from) {
+      navigate(location.state.from, { 
+        state: { 
+          fromDetail: true,
+          searchTerm: location.state.searchTerm,
+          selectedGenre: location.state.selectedGenre,
+          selectedCountry: location.state.selectedCountry,
+          contentType: location.state.contentType
+        },
+        replace: false
+      });
     } else {
-      navigate('/');
+      // Fallback to content type based navigation
+      const isAnime = selectedItem?.genres?.some(g => g.id === 16);
+      
+      if (type === 'movie') {
+        navigate('/movies', { state: { fromDetail: true } });
+      } else if (type === 'tv') {
+        if (isAnime) {
+          navigate('/anime', { state: { fromDetail: true } });
+        } else {
+          navigate('/tv-shows', { state: { fromDetail: true } });
+        }
+      } else {
+        navigate('/', { state: { fromDetail: true } });
+      }
     }
   };
 

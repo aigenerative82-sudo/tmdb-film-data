@@ -1,6 +1,6 @@
-// MoviesPage.jsx - With Proper Combined Filter Logic
+// MoviesPage.jsx - With Item ID Tracking and Auto-Scroll to Item
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from 'antd';
 import Navbar from '../components/Navbar';
 import ListPage from '../components/ListPage';
@@ -12,9 +12,11 @@ import { useContentManager } from '../hooks/useContentManager';
 const { Content } = Layout;
 
 const STORAGE_KEY = 'moviesPageState';
+const SCROLL_ITEM_KEY = 'moviesScrollItemId';
 
 const MoviesPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [genres, setGenres] = useState([]);
   const [countries, setCountries] = useState([]);
   
@@ -50,6 +52,68 @@ const MoviesPage = () => {
     setSelectedCountry
   } = useContentManager('movies', 'movie');
 
+  const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
+  const [savedScrollItemId, setSavedScrollItemId] = useState(null);
+
+  // Check if we need to restore scroll to item on mount
+  useEffect(() => {
+    const savedItemId = sessionStorage.getItem(SCROLL_ITEM_KEY);
+    console.log('Checking for saved item ID:', savedItemId, 'fromDetail:', location.state?.fromDetail);
+    if (savedItemId && location.state?.fromDetail) {
+      console.log('Setting up scroll restoration for item:', savedItemId);
+      setShouldRestoreScroll(true);
+      setSavedScrollItemId(parseInt(savedItemId));
+    }
+  }, [location]);
+
+  // Restore scroll position to specific item after content is loaded
+  useEffect(() => {
+    if (shouldRestoreScroll && savedScrollItemId && items.length > 0) {
+      console.log('Attempting scroll restoration. Loading:', loading, 'Items:', items.length);
+      
+      const attemptScroll = () => {
+        const itemElement = document.getElementById(`movie-item-${savedScrollItemId}`);
+        console.log('Looking for element:', `movie-item-${savedScrollItemId}`, 'Found:', !!itemElement);
+        
+        if (itemElement) {
+          console.log('✓ Scrolling to item:', savedScrollItemId);
+          
+          // Immediate scroll
+          itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Highlight the item briefly
+          itemElement.style.transition = 'background-color 0.3s ease';
+          itemElement.style.backgroundColor = 'rgba(24, 144, 255, 0.2)';
+          
+          setTimeout(() => {
+            itemElement.style.backgroundColor = '';
+            itemElement.style.transition = '';
+          }, 2000);
+          
+          // Cleanup
+          sessionStorage.removeItem(SCROLL_ITEM_KEY);
+          setShouldRestoreScroll(false);
+          setSavedScrollItemId(null);
+          window.history.replaceState({}, document.title);
+          
+          return true;
+        }
+        return false;
+      };
+      
+      // Try immediately
+      const found = attemptScroll();
+      
+      // If not found, try again after short delay
+      if (!found) {
+        const timer = setTimeout(attemptScroll, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [shouldRestoreScroll, savedScrollItemId, items]);
+
+
+
   const fetchGenres = async () => {
     try {
       const response = await fetch(`${BASE_URL}/genre/movie/list?api_key=${API_KEY}&language=en-US`);
@@ -83,8 +147,7 @@ const MoviesPage = () => {
         searchTerm,
         selectedGenreId: selectedGenre?.id,
         selectedCountryCode: selectedCountry?.iso_3166_1,
-        currentEndpoint,
-        scrollPosition: window.scrollY
+        currentEndpoint
       };
       
       try {
@@ -100,6 +163,14 @@ const MoviesPage = () => {
     const initialize = async () => {
       const genresList = await fetchGenres();
       const countriesList = await fetchCountries();
+      
+      // Check if coming from detail page - load fresh content
+      if (location.state?.fromDetail) {
+        console.log('Initializing from detail page - loading popular');
+        fetchContent('popular');
+        setIsRestoringState(false);
+        return;
+      }
       
       if (savedState) {
         // Restore all filters
@@ -128,15 +199,7 @@ const MoviesPage = () => {
           fetchContent('popular');
         }
 
-        // Restore scroll position
-        if (savedState.scrollPosition) {
-          setTimeout(() => {
-            window.scrollTo(0, savedState.scrollPosition);
-            setIsRestoringState(false);
-          }, 300);
-        } else {
-          setIsRestoringState(false);
-        }
+        setIsRestoringState(false);
       } else {
         fetchContent('popular');
         setIsRestoringState(false);
@@ -151,26 +214,22 @@ const MoviesPage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
-  // UPDATED: Combined filter logic with proper search handling
+  // Combined filter logic with proper search handling
   useEffect(() => {
     if (!isRestoringState && searchTerm.trim()) {
       const timeoutId = setTimeout(() => {
-        // Search with ALL active filters combined
         searchContent(searchTerm, selectedGenre, selectedCountry);
       }, 500);
 
       return () => clearTimeout(timeoutId);
     } else if (!isRestoringState && !searchTerm.trim() && (selectedGenre || selectedCountry)) {
-      // If search is cleared but filters exist, fetch with those filters
       handleClearSearch();
     }
   }, [searchTerm, isRestoringState]);
 
   const handleCategoryChange = (endpoint) => {
-    // Clear search when changing category
     setSearchTerm('');
     
-    // Maintain genre and country filters with category change
     if (selectedCountry && selectedGenre) {
       fetchContent(`${endpoint}-country-${selectedCountry.iso_3166_1}-genre-${selectedGenre.id}`);
     } else if (selectedCountry) {
@@ -186,15 +245,11 @@ const MoviesPage = () => {
     const genre = genres.find(g => g.id === genreId);
     setSelectedGenre(genre);
     
-    // UPDATED: Apply genre filter along with search and country
     if (searchTerm.trim()) {
-      // If searching, search with new genre + existing country
       searchContent(searchTerm, genre, selectedCountry);
     } else if (selectedCountry) {
-      // If country selected, show country + genre
       fetchContent(`country-${selectedCountry.iso_3166_1}-genre-${genreId}`);
     } else {
-      // Just show genre
       fetchContent(`genre-${genreId}`);
     }
   };
@@ -203,22 +258,17 @@ const MoviesPage = () => {
     const country = countries.find(c => c.iso_3166_1 === countryCode);
     setSelectedCountry(country);
     
-    // UPDATED: Apply country filter along with search and genre
     if (searchTerm.trim()) {
-      // If searching, search with new country + existing genre
       searchContent(searchTerm, selectedGenre, country);
     } else if (selectedGenre) {
-      // If genre selected, show country + genre
       fetchContent(`country-${countryCode}-genre-${selectedGenre.id}`);
     } else {
-      // Just show country
       fetchContent(`country-${countryCode}`);
     }
   };
 
   const handleClearSearch = () => {
     setSearchTerm('');
-    // After clearing search, show results based on remaining filters
     if (selectedCountry && selectedGenre) {
       fetchContent(`country-${selectedCountry.iso_3166_1}-genre-${selectedGenre.id}`);
     } else if (selectedCountry) {
@@ -232,9 +282,7 @@ const MoviesPage = () => {
 
   const handleClearGenre = () => {
     setSelectedGenre(null);
-    // UPDATED: Maintain search and country after clearing genre
     if (searchTerm.trim()) {
-      // Re-search with country but no genre
       searchContent(searchTerm, null, selectedCountry);
     } else if (selectedCountry) {
       fetchContent(`country-${selectedCountry.iso_3166_1}`);
@@ -245,9 +293,7 @@ const MoviesPage = () => {
 
   const handleClearCountry = () => {
     setSelectedCountry(null);
-    // UPDATED: Maintain search and genre after clearing country
     if (searchTerm.trim()) {
-      // Re-search with genre but no country
       searchContent(searchTerm, selectedGenre, null);
     } else if (selectedGenre) {
       fetchContent(`genre-${selectedGenre.id}`);
@@ -265,16 +311,19 @@ const MoviesPage = () => {
 
   const handleHomeClick = () => {
     sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(SCROLL_ITEM_KEY);
     navigate('/');
   };
 
   const handleAnimeClick = () => {
     sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(SCROLL_ITEM_KEY);
     navigate('/anime');
   };
 
   const handleContentTypeChange = (newType) => {
     sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(SCROLL_ITEM_KEY);
     if (newType === 'movie') {
       navigate('/movies');
     } else if (newType === 'tv') {
@@ -283,7 +332,19 @@ const MoviesPage = () => {
   };
 
   const handleMovieClick = (id) => {
-    navigate(`/detail/movie/${id}`);
+    // Save the clicked item ID for auto-scroll on return
+    sessionStorage.setItem(SCROLL_ITEM_KEY, id.toString());
+    
+    navigate(`/detail/movie/${id}`, {
+      state: {
+        from: '/movies',
+        fromDetail: true,
+        searchTerm,
+        selectedGenre,
+        selectedCountry,
+        contentType: 'movie'
+      }
+    });
   };
 
   // Cleanup
@@ -292,6 +353,7 @@ const MoviesPage = () => {
       const currentPath = window.location.pathname;
       if (!currentPath.includes('/movies') && !currentPath.includes('/detail/movie')) {
         sessionStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(SCROLL_ITEM_KEY);
       }
     };
   }, []);

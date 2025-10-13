@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { BASE_URL, API_KEY } from '../config';
 
 export const useContentManager = (storagePrefix, contentType, initialEndpoint = 'popular') => {
-  // State management - NO localStorage/sessionStorage
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -16,7 +15,27 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
   const [selectedGenre, setSelectedGenre] = useState(null);
   const [selectedCountry, setSelectedCountry] = useState(null);
 
-  // Fetch content
+  // Parse complex endpoints to extract filters
+  const parseEndpoint = (endpoint) => {
+    const filters = {};
+    
+    if (endpoint.includes('country-') && endpoint.includes('genre-')) {
+      const countryMatch = endpoint.match(/country-([A-Z]{2})/);
+      const genreMatch = endpoint.match(/genre-(\d+)/);
+      if (countryMatch) filters.country = countryMatch[1];
+      if (genreMatch) filters.genre = genreMatch[1];
+    } else if (endpoint.startsWith('country-')) {
+      const countryMatch = endpoint.match(/country-([A-Z]{2})/);
+      if (countryMatch) filters.country = countryMatch[1];
+    } else if (endpoint.startsWith('genre-')) {
+      const genreMatch = endpoint.match(/genre-(\d+)/);
+      if (genreMatch) filters.genre = genreMatch[1];
+    }
+    
+    return filters;
+  };
+
+  // Fetch content with full filter support
   const fetchContent = async (endpoint = 'popular', page = 1, reset = true) => {
     if (reset) {
       setLoading(true);
@@ -27,6 +46,7 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
     
     try {
       let url;
+      const filters = parseEndpoint(endpoint);
       
       // Handle anime TV series endpoints
       if (endpoint === 'anime') {
@@ -61,20 +81,24 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
         
         url = `${BASE_URL}/discover/movie?api_key=${API_KEY}&language=en-US&with_genres=16&with_origin_country=JP&with_original_language=ja&primary_release_date.gte=${thirtyDaysAgo.toISOString().split('T')[0]}&primary_release_date.lte=${thirtyDaysFromNow.toISOString().split('T')[0]}&sort_by=popularity.desc&page=${page}`;
       }
+      // Handle combined country + genre filtering
+      else if (filters.country && filters.genre) {
+        url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_origin_country=${filters.country}&with_genres=${filters.genre}&page=${page}&sort_by=popularity.desc`;
+      }
       // Handle genre filtering
-      else if (endpoint.startsWith('genre-')) {
-        const genreId = endpoint.split('-')[1];
-        url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_genres=${genreId}&page=${page}&sort_by=popularity.desc`;
+      else if (filters.genre) {
+        url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_genres=${filters.genre}&page=${page}&sort_by=popularity.desc`;
       } 
       // Handle country filtering
-      else if (endpoint.startsWith('country-')) {
-        const countryCode = endpoint.split('-')[1];
-        url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_origin_country=${countryCode}&page=${page}&sort_by=popularity.desc`;
+      else if (filters.country) {
+        url = `${BASE_URL}/discover/${contentType}?api_key=${API_KEY}&language=en-US&with_origin_country=${filters.country}&page=${page}&sort_by=popularity.desc`;
       } 
       // Handle default endpoints
       else {
         url = `${BASE_URL}/${contentType}/${endpoint}?api_key=${API_KEY}&language=en-US&page=${page}`;
       }
+      
+      console.log('Fetching URL:', url); // Debug log
       
       const response = await fetch(url);
       
@@ -100,6 +124,8 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
       if (reset) {
         setCurrentEndpoint(endpoint);
       }
+
+      console.log(`Page ${page} loaded. Total pages: ${data.total_pages}, Has more: ${page < (data.total_pages || 1)}`); // Debug
     } catch (err) {
       setError(`Failed to load content: ${err.message}`);
       console.error('Error fetching content:', err);
@@ -109,8 +135,8 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
     }
   };
 
-  // Search content
-  const searchContent = async (query, page = 1, reset = true) => {
+  // Search content with genre and country filters
+  const searchContent = async (query, genreFilter = null, countryFilter = null, page = 1, reset = true) => {
     if (!query.trim()) {
       fetchContent('popular');
       return;
@@ -124,9 +150,21 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
     setError('');
     
     try {
-      const response = await fetch(
-        `${BASE_URL}/search/${contentType}?api_key=${API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=${page}`
-      );
+      let url = `${BASE_URL}/search/${contentType}?api_key=${API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=${page}`;
+      
+      // Add genre filter if provided
+      if (genreFilter?.id) {
+        url += `&with_genres=${genreFilter.id}`;
+      }
+      
+      // Add country filter if provided
+      if (countryFilter?.iso_3166_1) {
+        url += `&with_origin_country=${countryFilter.iso_3166_1}`;
+      }
+
+      console.log('Search URL:', url); // Debug log
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error(`Search failed: ${response.status}`);
@@ -163,11 +201,11 @@ export const useContentManager = (storagePrefix, contentType, initialEndpoint = 
     const nextPage = currentPage + 1;
     
     if (currentEndpoint === 'search' && searchTerm) {
-      searchContent(searchTerm, nextPage, false);
+      searchContent(searchTerm, selectedGenre, selectedCountry, nextPage, false);
     } else {
       fetchContent(currentEndpoint, nextPage, false);
     }
-  }, [currentPage, hasMore, loadingMore, currentEndpoint, searchTerm]);
+  }, [currentPage, hasMore, loadingMore, currentEndpoint, searchTerm, selectedGenre, selectedCountry]);
 
   // Handle scroll
   const handleScroll = useCallback(() => {
