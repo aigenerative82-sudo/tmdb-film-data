@@ -1,4 +1,4 @@
-// MoviesPage.jsx - With Item ID Tracking and Auto-Scroll to Item
+// MoviesPage.jsx - With Active Filters at Bottom on Mobile
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from 'antd';
@@ -19,6 +19,7 @@ const MoviesPage = () => {
   const location = useLocation();
   const [genres, setGenres] = useState([]);
   const [countries, setCountries] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   
   // Try to restore previous state
   const getSavedState = () => {
@@ -54,6 +55,16 @@ const MoviesPage = () => {
 
   const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
   const [savedScrollItemId, setSavedScrollItemId] = useState(null);
+
+  // Handle window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Check if we need to restore scroll to item on mount
   useEffect(() => {
@@ -111,8 +122,6 @@ const MoviesPage = () => {
       }
     }
   }, [shouldRestoreScroll, savedScrollItemId, items]);
-
-
 
   const fetchGenres = async () => {
     try {
@@ -358,6 +367,10 @@ const MoviesPage = () => {
     };
   }, []);
 
+  // Check if we have active filters
+  const hasActiveFilters = searchTerm || selectedGenre || selectedCountry;
+  const showFilterBarOnTop = !searchTerm && !selectedGenre && !selectedCountry;
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Navbar 
@@ -373,8 +386,13 @@ const MoviesPage = () => {
         onAnimeClick={handleAnimeClick}
       />
 
-      <Content style={{ padding: '24px', backgroundColor: '#f0f2f5', paddingBottom: '80px' }}>
-        {!searchTerm && !selectedGenre && !selectedCountry && (
+      <Content style={{ 
+        padding: '24px', 
+        backgroundColor: '#f0f2f5', 
+        paddingBottom: isMobile && hasActiveFilters ? '80px' : '80px' 
+      }}>
+        {/* Show FilterBar at top when no filters are active */}
+        {showFilterBarOnTop && (
           <FilterBar 
             contentType="movie"
             currentEndpoint={currentEndpoint}
@@ -382,15 +400,18 @@ const MoviesPage = () => {
           />
         )}
         
-        <ActiveFilters
-          searchTerm={searchTerm}
-          selectedGenre={selectedGenre}
-          selectedCountry={selectedCountry}
-          onClearSearch={handleClearSearch}
-          onClearGenre={handleClearGenre}
-          onClearCountry={handleClearCountry}
-          onClearAll={handleClearAllFilters}
-        />
+        {/* Show ActiveFilters at top on desktop, or at top on mobile when FilterBar is visible */}
+        {(!isMobile || showFilterBarOnTop) && (
+          <ActiveFilters
+            searchTerm={searchTerm}
+            selectedGenre={selectedGenre}
+            selectedCountry={selectedCountry}
+            onClearSearch={handleClearSearch}
+            onClearGenre={handleClearGenre}
+            onClearCountry={handleClearCountry}
+            onClearAll={handleClearAllFilters}
+          />
+        )}
         
         <ListPage 
           items={items}
@@ -409,6 +430,34 @@ const MoviesPage = () => {
           onItemClick={handleMovieClick}
         />
       </Content>
+
+      {/* Fixed ActiveFilters at bottom on mobile when FilterBar is hidden */}
+      {isMobile && hasActiveFilters && !showFilterBarOnTop && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'white',
+          padding: '8px 12px',
+          boxShadow: '0 -2px 8px rgba(0,0,0,0.15)',
+          zIndex: 999,
+          borderTop: '1px solid #e8e8e8',
+          maxWidth: '100vw',
+          overflowX: 'auto'
+        }}>
+          <ActiveFilters
+            searchTerm={searchTerm}
+            selectedGenre={selectedGenre}
+            selectedCountry={selectedCountry}
+            onClearSearch={handleClearSearch}
+            onClearGenre={handleClearGenre}
+            onClearCountry={handleClearCountry}
+            onClearAll={handleClearAllFilters}
+            hideTitle={true}
+          />
+        </div>
+      )}
     </Layout>
   );
 };

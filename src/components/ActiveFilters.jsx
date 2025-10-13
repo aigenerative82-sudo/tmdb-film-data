@@ -10,7 +10,8 @@ const ActiveFilters = ({
   onClearSearch,
   onClearGenre,
   onClearCountry,
-  onClearAll
+  onClearAll,
+  hideTitle = false
 }) => {
   const hasFilters = searchTerm || selectedGenre || selectedCountry;
 
@@ -18,24 +19,26 @@ const ActiveFilters = ({
 
   return (
     <div style={{
-      backgroundColor: '#fff',
-      padding: '12px 16px',
-      borderRadius: '8px',
-      marginBottom: '16px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      backgroundColor: hideTitle ? 'transparent' : '#fff',
+      padding: hideTitle ? '0' : '12px 16px',
+      borderRadius: hideTitle ? '0' : '8px',
+      marginBottom: hideTitle ? '0' : '16px',
+      boxShadow: hideTitle ? 'none' : '0 2px 8px rgba(0,0,0,0.08)',
       display: 'flex',
       alignItems: 'center',
       flexWrap: 'wrap',
       gap: '8px'
     }}>
-      <span style={{ 
-        fontWeight: '600', 
-        color: '#595959',
-        marginRight: '8px',
-        fontSize: '14px'
-      }}>
-        Active Filters:
-      </span>
+      {!hideTitle && (
+        <span style={{ 
+          fontWeight: '600', 
+          color: '#595959',
+          marginRight: '8px',
+          fontSize: '14px'
+        }}>
+          Active Filters:
+        </span>
+      )}
       
       <Space size={8} wrap>
         {searchTerm && (

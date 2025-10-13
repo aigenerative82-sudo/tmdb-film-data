@@ -20,6 +20,7 @@ const AnimePage = () => {
   const [genres, setGenres] = useState([]);
   const [countries, setCountries] = useState([]);
   const [animeType, setAnimeType] = useState('tv'); // 'tv' or 'movie'
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Try to restore previous state
   const getSavedState = () => {
@@ -55,6 +56,16 @@ const AnimePage = () => {
 
   const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
   const [savedScrollItemId, setSavedScrollItemId] = useState(null);
+
+  // Handle window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Check if we need to restore scroll to item on mount
   useEffect(() => {
@@ -257,9 +268,11 @@ const AnimePage = () => {
     if (searchTerm.trim()) {
       searchContent(searchTerm, genre, selectedCountry);
     } else if (selectedCountry) {
-      fetchContent(`country-${selectedCountry.iso_3166_1}-genre-${genreId}`);
+      // Keep anime filtering even with genre + country
+      fetchContent(`anime-country-${selectedCountry.iso_3166_1}-genre-${genreId}`);
     } else {
-      fetchContent(`genre-${genreId}`);
+      // Keep anime filtering with just genre
+      fetchContent(`anime-genre-${genreId}`);
     }
   };
 
@@ -270,20 +283,22 @@ const AnimePage = () => {
     if (searchTerm.trim()) {
       searchContent(searchTerm, selectedGenre, country);
     } else if (selectedGenre) {
-      fetchContent(`country-${countryCode}-genre-${selectedGenre.id}`);
+      // Keep anime filtering even with country + genre
+      fetchContent(`anime-country-${countryCode}-genre-${selectedGenre.id}`);
     } else {
-      fetchContent(`country-${countryCode}`);
+      // Keep anime filtering with just country
+      fetchContent(`anime-country-${countryCode}`);
     }
   };
 
   const handleClearSearch = () => {
     setSearchTerm('');
     if (selectedCountry && selectedGenre) {
-      fetchContent(`country-${selectedCountry.iso_3166_1}-genre-${selectedGenre.id}`);
+      fetchContent(`anime-country-${selectedCountry.iso_3166_1}-genre-${selectedGenre.id}`);
     } else if (selectedCountry) {
-      fetchContent(`country-${selectedCountry.iso_3166_1}`);
+      fetchContent(`anime-country-${selectedCountry.iso_3166_1}`);
     } else if (selectedGenre) {
-      fetchContent(`genre-${selectedGenre.id}`);
+      fetchContent(`anime-genre-${selectedGenre.id}`);
     } else {
       fetchContent(animeType === 'tv' ? 'anime' : 'anime-movie-popular');
     }
@@ -294,7 +309,7 @@ const AnimePage = () => {
     if (searchTerm.trim()) {
       searchContent(searchTerm, null, selectedCountry);
     } else if (selectedCountry) {
-      fetchContent(`country-${selectedCountry.iso_3166_1}`);
+      fetchContent(`anime-country-${selectedCountry.iso_3166_1}`);
     } else {
       fetchContent(animeType === 'tv' ? 'anime' : 'anime-movie-popular');
     }
@@ -305,7 +320,7 @@ const AnimePage = () => {
     if (searchTerm.trim()) {
       searchContent(searchTerm, selectedGenre, null);
     } else if (selectedGenre) {
-      fetchContent(`genre-${selectedGenre.id}`);
+      fetchContent(`anime-genre-${selectedGenre.id}`);
     } else {
       fetchContent(animeType === 'tv' ? 'anime' : 'anime-movie-popular');
     }
@@ -374,6 +389,10 @@ const AnimePage = () => {
     };
   }, []);
 
+  // Check if we have active filters
+  const hasActiveFilters = searchTerm || selectedGenre || selectedCountry;
+  const showFilterBarOnTop = !searchTerm && !selectedGenre && !selectedCountry;
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Navbar 
@@ -389,24 +408,34 @@ const AnimePage = () => {
         onAnimeClick={handleAnimeClick}
       />
 
-      <Content style={{ padding: '24px', backgroundColor: '#f0f2f5', paddingBottom: '80px' }}>
-        <FilterBar 
-          contentType="anime"
-          currentEndpoint={currentEndpoint}
-          onCategoryChange={handleCategoryChange}
-          animeType={animeType}
-          onAnimeTypeChange={handleAnimeTypeChange}
-        />
+      <Content style={{ 
+        padding: '24px', 
+        backgroundColor: '#f0f2f5', 
+        paddingBottom: isMobile && hasActiveFilters ? '80px' : '80px' 
+      }}>
+        {/* Show FilterBar at top when no filters are active */}
+        {showFilterBarOnTop && (
+          <FilterBar 
+            contentType="anime"
+            currentEndpoint={currentEndpoint}
+            onCategoryChange={handleCategoryChange}
+            animeType={animeType}
+            onAnimeTypeChange={handleAnimeTypeChange}
+          />
+        )}
 
-        <ActiveFilters
-          searchTerm={searchTerm}
-          selectedGenre={selectedGenre}
-          selectedCountry={selectedCountry}
-          onClearSearch={handleClearSearch}
-          onClearGenre={handleClearGenre}
-          onClearCountry={handleClearCountry}
-          onClearAll={handleClearAllFilters}
-        />
+        {/* Show ActiveFilters at top on desktop, or at top on mobile when FilterBar is visible */}
+        {(!isMobile || showFilterBarOnTop) && (
+          <ActiveFilters
+            searchTerm={searchTerm}
+            selectedGenre={selectedGenre}
+            selectedCountry={selectedCountry}
+            onClearSearch={handleClearSearch}
+            onClearGenre={handleClearGenre}
+            onClearCountry={handleClearCountry}
+            onClearAll={handleClearAllFilters}
+          />
+        )}
         
         <ListPage 
           items={items}
@@ -425,6 +454,34 @@ const AnimePage = () => {
           onItemClick={handleAnimeItemClick}
         />
       </Content>
+
+      {/* Fixed ActiveFilters at bottom on mobile when FilterBar is hidden */}
+      {isMobile && hasActiveFilters && !showFilterBarOnTop && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'white',
+          padding: '8px 12px',
+          boxShadow: '0 -2px 8px rgba(0,0,0,0.15)',
+          zIndex: 999,
+          borderTop: '1px solid #e8e8e8',
+          maxWidth: '100vw',
+          overflowX: 'auto'
+        }}>
+          <ActiveFilters
+            searchTerm={searchTerm}
+            selectedGenre={selectedGenre}
+            selectedCountry={selectedCountry}
+            onClearSearch={handleClearSearch}
+            onClearGenre={handleClearGenre}
+            onClearCountry={handleClearCountry}
+            onClearAll={handleClearAllFilters}
+            hideTitle={true}
+          />
+        </div>
+      )}
     </Layout>
   );
 };
