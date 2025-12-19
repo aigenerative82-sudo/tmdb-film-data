@@ -1,4 +1,5 @@
-// DetailPage.jsx
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Spin, Modal, Button, Typography, Empty, Select, Card, Row, Col, Badge } from 'antd';
@@ -40,20 +41,11 @@ const DetailPage = () => {
   // Save to recently watched in localStorage
   const saveToRecentlyWatched = (itemId, itemType) => {
     try {
-      // Get existing watched items
       const stored = localStorage.getItem('recentlyWatched');
       let watchedItems = stored ? JSON.parse(stored) : [];
-      
-      // Remove if already exists (to avoid duplicates)
       watchedItems = watchedItems.filter(item => !(item.id === itemId && item.type === itemType));
-      
-      // Add to beginning of array
       watchedItems.unshift({ id: itemId, type: itemType, timestamp: Date.now() });
-      
-      // Keep only last 12 items
       watchedItems = watchedItems.slice(0, 12);
-      
-      // Save back to localStorage
       localStorage.setItem('recentlyWatched', JSON.stringify(watchedItems));
     } catch (err) {
       console.error('Error saving to recently watched:', err);
@@ -82,10 +74,8 @@ const DetailPage = () => {
     }
   };
 
-  // Fetch related/similar content
   const fetchRelatedContent = async (itemId, itemType) => {
     try {
-      // Try recommendations first
       let response = await fetch(
         `${BASE_URL}/${itemType}/${itemId}/recommendations?api_key=${API_KEY}&language=en-US&page=1`
       );
@@ -95,7 +85,6 @@ const DetailPage = () => {
         data = await response.json();
       }
 
-      // If no recommendations, try similar content
       if (!data.results || data.results.length === 0) {
         response = await fetch(
           `${BASE_URL}/${itemType}/${itemId}/similar?api_key=${API_KEY}&language=en-US&page=1`
@@ -106,7 +95,6 @@ const DetailPage = () => {
       }
 
       const related = data.results?.slice(0, 12) || [];
-      console.log('Related content fetched:', related.length, 'items');
       setRelatedContent(related);
     } catch (err) {
       console.error('Error fetching related content:', err);
@@ -190,17 +178,13 @@ const DetailPage = () => {
       fetchItemDetails(id, type);
       fetchGenres(type);
       fetchCountries();
-      
-      // Auto-select best server for content type
       setActiveServer(getBestServer(type));
-
       setAutoPlayTrailer(false);
       const timer = setTimeout(() => setAutoPlayTrailer(true), 5000);
       return () => clearTimeout(timer);
     }
   }, [id, type]);
 
-  // Save to recently watched when item details are loaded
   useEffect(() => {
     if (id && type && selectedItem) {
       saveToRecentlyWatched(id, type);
@@ -211,22 +195,14 @@ const DetailPage = () => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
       const landscape = window.innerHeight < window.innerWidth;
-      
-      // Only update state if values actually changed to prevent unnecessary re-renders
       setIsMobile(prev => prev !== mobile ? mobile : prev);
       setIsLandscape(prev => prev !== landscape ? landscape : prev);
     };
-
     window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Smart back navigation with scroll restoration
   const handleBack = () => {
-    // If we have state from previous page, navigate back with fromDetail flag
     if (location.state?.from) {
       navigate(location.state.from, { 
         state: { 
@@ -239,9 +215,7 @@ const DetailPage = () => {
         replace: false
       });
     } else {
-      // Fallback to content type based navigation
       const isAnime = selectedItem?.genres?.some(g => g.id === 16);
-      
       if (type === 'movie') {
         navigate('/movies', { state: { fromDetail: true } });
       } else if (type === 'tv') {
@@ -259,7 +233,6 @@ const DetailPage = () => {
   const handleHomeClick = () => navigate('/');
   
   const handleGenreSelect = (genreId) => {
-    // Navigate with genre filter
     if (type === 'movie') {
       navigate(`/movies?genre=${genreId}`);
     } else if (type === 'tv') {
@@ -270,7 +243,6 @@ const DetailPage = () => {
   };
   
   const handleCountrySelect = (countryCode) => {
-    // Navigate with country filter
     if (type === 'movie') {
       navigate(`/movies?country=${countryCode}`);
     } else if (type === 'tv') {
@@ -294,9 +266,13 @@ const DetailPage = () => {
   };
 
   const handleRelatedItemClick = (itemId) => {
-    // Navigate to the related item detail page
     navigate(`/detail/${contentType}/${itemId}`);
-    // Scroll to top
+    window.scrollTo(0, 0);
+  };
+
+  // NEW: Handle cast member click
+  const handleCastClick = (personId) => {
+    navigate(`/person/${personId}`);
     window.scrollTo(0, 0);
   };
 
@@ -308,7 +284,6 @@ const DetailPage = () => {
       }
     }
     setShowPlayer(true);
-    // Scroll to player after a short delay
     setTimeout(() => {
       document.getElementById('video-player-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
@@ -334,13 +309,10 @@ const DetailPage = () => {
   };
 
   const buildStreamUrl = (server, type, id, season, episode) => {
-    // Use custom URL builder if server has one
     if (server.urlBuilder) {
       return server.urlBuilder(type, id, season, episode);
     }
-    
     const serverUrl = server.url;
-    
     if (type === 'tv' && season && episode) {
       if (serverUrl.includes('vidsrc.to')) {
         return `${serverUrl}/tv/${id}/${season.season_number}/${episode.episode_number}`;
@@ -382,8 +354,6 @@ const DetailPage = () => {
   const InlinePlayer = () => {
     const tmdbId = selectedItem?.id;
     const streamingUrl = activeServer ? buildStreamUrl(activeServer, contentType, tmdbId, selectedSeason, selectedEpisode) : '';
-    
-    // Get available servers for current content type
     const availableServers = getServersByType(contentType);
 
     const handleServerChange = (serverName) => {
@@ -415,7 +385,6 @@ const DetailPage = () => {
           }}
           bodyStyle={{ padding: 0 }}
         >
-          {/* Player Controls */}
           <div style={{ 
             padding: isMobile ? '12px 16px' : '16px 24px', 
             backgroundColor: '#fafafa', 
@@ -452,7 +421,6 @@ const DetailPage = () => {
                 ))}
               </Select>
               
-              {/* Season Selector for TV Shows */}
               {contentType === 'tv' && seasons.length > 0 && (
                 <>
                   <strong style={{ whiteSpace: 'nowrap' }}>Season:</strong>
@@ -494,7 +462,6 @@ const DetailPage = () => {
             display: 'flex',
             minHeight: isMobile ? '300px' : '600px'
           }}>
-            {/* Video Player */}
             <div style={{ 
               flex: contentType === 'tv' && selectedSeason ? (isMobile ? '1' : '2') : '1',
               position: 'relative'
@@ -531,7 +498,6 @@ const DetailPage = () => {
               )}
             </div>
 
-            {/* Episode List for TV Shows - Desktop */}
             {contentType === 'tv' && selectedSeason && !isMobile && (
               <div style={{
                 flex: '1',
@@ -599,7 +565,6 @@ const DetailPage = () => {
             )}
           </div>
 
-          {/* Mobile Episode List */}
           {contentType === 'tv' && selectedSeason && isMobile && (
             <div style={{
               padding: '16px',
@@ -747,12 +712,11 @@ const DetailPage = () => {
           onTrailerClick={() => setTrailerModalVisible(true)}
           onEpisodeSelect={handleEpisodeSelect}
           autoPlayTrailer={autoPlayTrailer}
+          onCastClick={handleCastClick}
         />
         
-        {/* Inline Video Player */}
         {showPlayer && <InlinePlayer />}
         
-        {/* Related Content Section */}
         {relatedContent && relatedContent.length > 0 && (
           <RelatedContent
             items={relatedContent}

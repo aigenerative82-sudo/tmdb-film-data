@@ -5,7 +5,9 @@ import HomePage from './pages/HomePage';
 import MoviesPage from './pages/MoviesPage';
 import TVShowsPage from './pages/TVShowsPage';
 import AnimePage from './pages/AnimePage';
-import DetailPage from './pages/DetailPage'; // Make sure this import is correct
+import DetailPage from './pages/DetailPage';
+import SearchPage from './pages/SearchPage'; 
+import PersonPage from './pages/PersonPage';// Make sure this import is correct
 import './App.css';
 
 function App() {
@@ -20,6 +22,8 @@ function App() {
         {/* Alternative routes if you prefer */}
         <Route path="/movie/:id" element={<DetailPage />} />
         <Route path="/tv/:id" element={<DetailPage />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="/person/:id" element={<PersonPage />} />
       </Routes>
     </BrowserRouter>
   );
