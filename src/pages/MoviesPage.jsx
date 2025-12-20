@@ -388,7 +388,7 @@ const MoviesPage = () => {
 
       <Content style={{ 
         padding: '24px', 
-        backgroundColor: '#f0f2f5', 
+        backgroundColor: '#051c3fff', 
         paddingBottom: isMobile && hasActiveFilters ? '80px' : '80px' 
       }}>
         {/* Show FilterBar at top when no filters are active */}

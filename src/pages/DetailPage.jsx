@@ -387,7 +387,7 @@ const DetailPage = () => {
         >
           <div style={{ 
             padding: isMobile ? '12px 16px' : '16px 24px', 
-            backgroundColor: '#fafafa', 
+            backgroundColor: '#0b063bff', 
             borderBottom: '1px solid #eee',
             display: 'flex',
             alignItems: 'center',

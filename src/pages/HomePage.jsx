@@ -1,8 +1,8 @@
-// HomePage.jsx - Updated with notification initialization
+// HomePage.jsx - Updated with separated components
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Layout, Spin, Button, Tag, Badge } from 'antd';
-import { CloseOutlined, BellOutlined } from '@ant-design/icons';
+import { Layout, Spin, Button, Tag } from 'antd';
+import { CloseOutlined } from '@ant-design/icons';
 import Navbar from '../components/Navbar';
 import HeroSection from '../components/HeroSection';
 import UpcomingBanner from '../components/UpcomingBanner';
@@ -10,8 +10,6 @@ import ContentSection from '../components/ContentSection';
 import RecentlyWatchedSection from '../components/RecentlyWatchedSection';
 import TermsModal from '../components/TermsModal';
 import SearchResults from '../components/SearchResults';
-import NotificationSettings from '../components/NotificationSettings';
-import notificationService from '../services/notificationService';
 import { BASE_URL, API_KEY } from '../config';
 
 const { Content } = Layout;
@@ -50,28 +48,6 @@ const HomePage = () => {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [filteredResults, setFilteredResults] = useState(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState('default');
-
-  // Initialize notifications on mount
-  useEffect(() => {
-    const initNotifications = async () => {
-      // Check if user hasn't disabled notifications
-      const disabled = localStorage.getItem('notificationsDisabled');
-      
-      if (!disabled && 'Notification' in window) {
-        // If permission already granted, initialize service
-        if (Notification.permission === 'granted') {
-          await notificationService.initialize();
-          notificationService.schedulePeriodicCheck();
-        }
-        
-        setNotificationPermission(Notification.permission);
-      }
-    };
-
-    initNotifications();
-  }, []);
 
   // Save and restore scroll position
   useEffect(() => {
@@ -571,47 +547,7 @@ const HomePage = () => {
         onSearch={handleGlobalSearch}
       />
 
-      <Content style={{ padding: '24px', backgroundColor: '#f0f2f5' }}>
-        {/* Notification Bell Button */}
-        <div style={{ 
-          position: 'fixed', 
-          top: '80px', 
-          right: '24px', 
-          zIndex: 1000 
-        }}>
-          <Badge 
-            dot={notificationPermission === 'default'} 
-            status={notificationPermission === 'granted' ? 'success' : 'default'}
-          >
-            <Button
-              type="primary"
-              shape="circle"
-              size="large"
-              icon={<BellOutlined />}
-              onClick={() => setShowNotificationSettings(!showNotificationSettings)}
-              style={{
-                width: '56px',
-                height: '56px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-              }}
-            />
-          </Badge>
-        </div>
-
-        {/* Notification Settings Panel */}
-        {showNotificationSettings && (
-          <div style={{
-            position: 'fixed',
-            top: '150px',
-            right: '24px',
-            zIndex: 999,
-            maxWidth: '400px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-          }}>
-            <NotificationSettings />
-          </div>
-        )}
-
+      <Content style={{ padding: '24px', backgroundColor: '#03092cff' }}>
         {!searchResults && !filteredResults && (
           <HeroSection items={heroItems} onItemClick={handleItemClick} />
         )}

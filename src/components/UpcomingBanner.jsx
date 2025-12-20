@@ -1,4 +1,4 @@
-// components/UpcomingBanner.jsx
+// components/UpcomingBanner.jsx - Black & White Theme
 import React from 'react';
 import { Row, Col, Typography } from 'antd';
 
@@ -13,11 +13,12 @@ const UpcomingBanner = ({ items, type, title, onItemClick }) => {
     <div style={{ 
       marginBottom: '48px',
       padding: isMobile ? '20px' : '32px',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: '#000000',
       borderRadius: '12px',
-      color: 'white'
+      color: 'white',
+      border: '1px solid #333333'
     }}>
-      <Title level={4} style={{ color: 'white', marginBottom: '20px' }}>
+      <Title level={4} style={{ color: '#ffffff', marginBottom: '20px' }}>
         🎬 {title}
       </Title>
       
@@ -30,11 +31,20 @@ const UpcomingBanner = ({ items, type, title, onItemClick }) => {
                 cursor: 'pointer',
                 borderRadius: '8px',
                 overflow: 'hidden',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                transition: 'transform 0.3s',
+                backgroundColor: '#1a1a1a',
+                transition: 'transform 0.3s, box-shadow 0.3s, border-color 0.3s',
+                border: '2px solid #333333'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(255,255,255,0.1)';
+                e.currentTarget.style.borderColor = '#666666';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.borderColor = '#333333';
+              }}
             >
               <img 
                 src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
@@ -45,13 +55,17 @@ const UpcomingBanner = ({ items, type, title, onItemClick }) => {
                   objectFit: 'cover' 
                 }}
               />
-              <div style={{ padding: '12px' }}>
+              <div style={{ 
+                padding: '12px',
+                backgroundColor: '#000000'
+              }}>
                 <div style={{ 
                   fontWeight: 'bold', 
                   fontSize: isMobile ? '12px' : '14px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  color: '#ffffff'
                 }}>
                   {item.title || item.name}
                 </div>
@@ -59,7 +73,8 @@ const UpcomingBanner = ({ items, type, title, onItemClick }) => {
                   <div style={{ 
                     fontSize: isMobile ? '10px' : '12px', 
                     opacity: 0.8, 
-                    marginTop: '4px' 
+                    marginTop: '4px',
+                    color: '#cccccc'
                   }}>
                     {new Date(item.release_date || item.first_air_date).toLocaleDateString('en-US', { 
                       month: 'short', 

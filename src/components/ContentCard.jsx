@@ -1,4 +1,4 @@
-// ContentCard.jsx
+// ContentCard.jsx - Black background with white text
 import React, { useState, useEffect } from 'react';
 import { Card, Image, Typography, Tag } from 'antd';
 import { StarFilled, VideoCameraOutlined, CalendarOutlined, PlaySquareOutlined } from '@ant-design/icons';
@@ -67,8 +67,16 @@ export const ContentCard = ({ item, contentType, onClick }) => {
   return (
     <Card
       hoverable
-      style={{ marginBottom: 16, height: '100%' }}
-      bodyStyle={{ padding: isMobile ? '10px 12px' : '8px 12px' }}
+      style={{ 
+        marginBottom: 16, 
+        height: '100%',
+        backgroundColor: '#000000',
+        border: '1px solid #333333'
+      }}
+      bodyStyle={{ 
+        padding: isMobile ? '10px 12px' : '8px 12px',
+        backgroundColor: '#000000'
+      }}
       cover={
         <div style={{ position: 'relative', width: '100%', paddingBottom: '150%', overflow: 'hidden' }}>
           {item.poster_path ? (
@@ -86,8 +94,8 @@ export const ContentCard = ({ item, contentType, onClick }) => {
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.parentElement.innerHTML = `
-                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #f5f5f5;">
-                    <svg width="48" height="48" fill="#d9d9d9" viewBox="64 64 896 896">
+                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #1a1a1a;">
+                    <svg width="48" height="48" fill="#666666" viewBox="64 64 896 896">
                       <path d="M912 302.3L784 376V224c0-35.3-28.7-64-64-64H128c-35.3 0-64 28.7-64 64v352c0 35.3 28.7 64 64 64h592c35.3 0 64-28.7 64-64V424l128 73.7c21.3 12.3 48-3.1 48-27.6V330c0-24.6-26.7-40-48-27.7zM712 576H128V224h584v352z"/>
                     </svg>
                   </div>
@@ -104,9 +112,9 @@ export const ContentCard = ({ item, contentType, onClick }) => {
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
-              backgroundColor: '#f5f5f5' 
+              backgroundColor: '#1a1a1a'
             }}>
-              <VideoCameraOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />
+              <VideoCameraOutlined style={{ fontSize: 48, color: '#666666' }} />
             </div>
           )}
           
@@ -157,19 +165,21 @@ export const ContentCard = ({ item, contentType, onClick }) => {
             fontSize: isMobile ? '15px' : '13px',
             fontWeight: 600,
             marginBottom: isMobile ? 6 : 4,
-            lineHeight: '1.3'
+            lineHeight: '1.3',
+            color: '#ffffff'
           }}>
             {item.title || item.name}
           </div>
         }
         description={
-          <Text type="secondary" style={{ 
+          <Text style={{ 
             fontSize: isMobile ? '12px' : '11px', 
             display: 'flex', 
             alignItems: 'center', 
-            gap: 3 
+            gap: 3,
+            color: '#cccccc'
           }}>
-            <CalendarOutlined style={{ fontSize: isMobile ? '12px' : '11px' }} /> 
+            <CalendarOutlined style={{ fontSize: isMobile ? '12px' : '11px', color: '#cccccc' }} /> 
             {item.release_date || item.first_air_date || 'N/A'}
           </Text>
         }

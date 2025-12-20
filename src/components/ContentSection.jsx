@@ -1,4 +1,4 @@
-// components/ContentSection.jsx
+// components/ContentSection.jsx - Black & White Theme
 import React from 'react';
 import { Row, Col, Typography, Button } from 'antd';
 import { ArrowRightOutlined } from '@ant-design/icons';
@@ -17,14 +17,20 @@ const ContentSection = ({
   onItemClick 
 }) => {
   return (
-    <div style={{ marginBottom: '48px' }}>
+    <div style={{ 
+      marginBottom: '48px',
+      backgroundColor: '#000000',
+      padding: '24px',
+      borderRadius: '8px',
+      border: '1px solid #333333'
+    }}>
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
         marginBottom: '24px'
       }}>
-        <Title level={3} style={{ margin: 0 }}>{title}</Title>
+        <Title level={3} style={{ margin: 0, color: '#ffffff' }}>{title}</Title>
       </div>
       
       <Row gutter={[16, 16]}>
@@ -50,6 +56,11 @@ const ContentSection = ({
             type="default"
             size="large"
             onClick={onLoadMore}
+            style={{
+              backgroundColor: '#1a1a1a',
+              color: '#ffffff',
+              borderColor: '#666666'
+            }}
           >
             Load 10 More
           </Button>
@@ -60,6 +71,11 @@ const ContentSection = ({
             size="large"
             icon={<ArrowRightOutlined />}
             onClick={onSeeMore}
+            style={{
+              backgroundColor: '#333333',
+              color: '#ffffff',
+              borderColor: '#666666'
+            }}
           >
             See All
           </Button>
