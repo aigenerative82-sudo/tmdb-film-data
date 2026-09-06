@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Spin, Modal, Button, Typography, Empty, Select, Card, Row, Col, Badge } from 'antd';
-import { GlobalOutlined, FullscreenOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { GlobalOutlined, FullscreenOutlined, PlayCircleOutlined, DownloadOutlined } from '@ant-design/icons';
 import Navbar from '../components/Navbar';
 import DetailsPage from '../components/DetailsPage';
 import RelatedContent from '../components/RelatedContent';
@@ -371,6 +371,19 @@ const DetailPage = () => {
       }
     };
 
+    const handleDownload = () => {
+      if (!streamingUrl) return;
+      const fileName = selectedItem?.title || selectedItem?.name || 'video';
+      const link = document.createElement('a');
+      link.href = streamingUrl;
+      link.download = fileName;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
     return (
       <div id="video-player-section" style={{ 
         maxWidth: 1400, 
@@ -447,6 +460,14 @@ const DetailPage = () => {
               >
                 {isMobile ? 'Tab' : 'Open in new tab'}
               </Button>
+
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={handleDownload}
+                disabled={!streamingUrl}
+              >
+                {isMobile ? 'Save' : 'Download'}
+              </Button>
               
               <Button
                 type="primary"
@@ -473,6 +494,8 @@ const DetailPage = () => {
                   src={streamingUrl}
                   allowFullScreen
                   title="External Stream"
+                  referrerPolicy="origin"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   style={{
                     width: '100%',
                     height: isMobile ? '300px' : '600px',
