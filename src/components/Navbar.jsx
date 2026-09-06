@@ -417,8 +417,7 @@ export const Navbar = ({
           transition: 'all 0.3s ease',
           height: '64px',
           display: 'flex',
-          alignItems: 'center',
-          position: 'relative'
+          alignItems: 'center'
         }}
       >
         {!isMobile && (

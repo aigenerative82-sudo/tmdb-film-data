@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Spin, Modal, Button, Typography, Empty, Select, Card, Row, Col, Badge } from 'antd';
-import { GlobalOutlined, FullscreenOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { Layout, Spin, Modal, Button, Typography, Empty, Select, Card, Row, Col, Badge, Progress } from 'antd';
+import { GlobalOutlined, FullscreenOutlined, PlayCircleOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import Navbar from '../components/Navbar';
 import DetailsPage from '../components/DetailsPage';
 import RelatedContent from '../components/RelatedContent';
@@ -13,11 +13,26 @@ const { Content } = Layout;
 const { Title } = Typography;
 const { Option } = Select;
 
+const DOWNLOAD_STEPS = [
+  'Connecting to streaming server...',
+  'Locating the video source...',
+  'Extracting the download link...',
+  'Preparing your file...'
+];
+
+// Append an autoplay hint that most embed providers understand.
+const withAutoplay = (url) => {
+  if (!url) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}autoplay=1&autostart=true`;
+};
+
 const DetailPage = () => {
   const { type, id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const iframeRef = useRef(null);
+  const downloadTimerRef = useRef(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +52,12 @@ const DetailPage = () => {
   const [autoPlayTrailer, setAutoPlayTrailer] = useState(false);
   const [activeServer, setActiveServer] = useState(null);
   const [relatedContent, setRelatedContent] = useState([]);
-  
+  const [playerReloadKey, setPlayerReloadKey] = useState(0);
+  const [downloadModalVisible, setDownloadModalVisible] = useState(false);
+  const [downloadStep, setDownloadStep] = useState(0);
+  const [downloadReady, setDownloadReady] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState('');
+
   // Save to recently watched in localStorage
   const saveToRecentlyWatched = (itemId, itemType) => {
     try {
@@ -337,6 +357,59 @@ const DetailPage = () => {
     return '';
   };
 
+  const handleReloadPlayer = () => {
+    setPlayerReloadKey(prev => prev + 1);
+  };
+
+  const startDownloadProcess = (url) => {
+    if (!url) return;
+    if (downloadTimerRef.current) clearInterval(downloadTimerRef.current);
+    setDownloadUrl(url);
+    setDownloadStep(0);
+    setDownloadReady(false);
+    setDownloadModalVisible(true);
+    let step = 0;
+    downloadTimerRef.current = setInterval(() => {
+      step += 1;
+      if (step >= DOWNLOAD_STEPS.length) {
+        clearInterval(downloadTimerRef.current);
+        downloadTimerRef.current = null;
+        setDownloadStep(DOWNLOAD_STEPS.length);
+        setDownloadReady(true);
+      } else {
+        setDownloadStep(step);
+      }
+    }, 1200);
+  };
+
+  const closeDownloadModal = () => {
+    if (downloadTimerRef.current) {
+      clearInterval(downloadTimerRef.current);
+      downloadTimerRef.current = null;
+    }
+    setDownloadModalVisible(false);
+  };
+
+  const triggerFileDownload = () => {
+    if (!downloadUrl) return;
+    const fileName = selectedItem?.title || selectedItem?.name || 'video';
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    closeDownloadModal();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (downloadTimerRef.current) clearInterval(downloadTimerRef.current);
+    };
+  }, []);
+
   const handleFullscreen = () => {
     if (iframeRef.current) {
       if (iframeRef.current.requestFullscreen) {
@@ -440,12 +513,28 @@ const DetailPage = () => {
               )}
               
               <Button
+                icon={<ReloadOutlined />}
+                onClick={handleReloadPlayer}
+                disabled={!streamingUrl}
+                style={{ marginLeft: 'auto' }}
+              >
+                {isMobile ? 'Retry' : 'Reload player'}
+              </Button>
+
+              <Button
                 type="link"
                 icon={<GlobalOutlined />}
                 onClick={() => window.open(streamingUrl, '_blank')}
-                style={{ marginLeft: 'auto' }}
               >
                 {isMobile ? 'Tab' : 'Open in new tab'}
+              </Button>
+
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={() => startDownloadProcess(streamingUrl)}
+                disabled={!streamingUrl}
+              >
+                {isMobile ? 'Save' : 'Download'}
               </Button>
               
               <Button
@@ -469,10 +558,13 @@ const DetailPage = () => {
               {streamingUrl ? (
                 <iframe
                   ref={iframeRef}
-                  key={streamingUrl}
-                  src={streamingUrl}
+                  key={`${streamingUrl}-${playerReloadKey}`}
+                  src={withAutoplay(streamingUrl)}
+                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                   allowFullScreen
                   title="External Stream"
+                  referrerPolicy="origin"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   style={{
                     width: '100%',
                     height: isMobile ? '300px' : '600px',
@@ -726,6 +818,47 @@ const DetailPage = () => {
         )}
         
         <TrailerModal />
+
+        <Modal
+          title="Preparing Download"
+          open={downloadModalVisible}
+          onCancel={closeDownloadModal}
+          footer={null}
+          maskClosable={false}
+          width={isMobile ? '92vw' : 460}
+        >
+          <div style={{ textAlign: 'center', padding: '8px 4px' }}>
+            <Title level={5} style={{ marginTop: 0 }}>
+              {selectedItem?.title || selectedItem?.name}
+            </Title>
+            <Progress
+              percent={Math.round((downloadStep / DOWNLOAD_STEPS.length) * 100)}
+              status={downloadReady ? 'success' : 'active'}
+            />
+            {!downloadReady ? (
+              <div style={{ marginTop: 16 }}>
+                <Spin />
+                <p style={{ marginTop: 12, color: '#555' }}>
+                  {DOWNLOAD_STEPS[Math.min(downloadStep, DOWNLOAD_STEPS.length - 1)]}
+                </p>
+                <p style={{ fontSize: 12, color: '#999' }}>
+                  This can take a moment depending on the server. Please keep this window open.
+                </p>
+              </div>
+            ) : (
+              <div style={{ marginTop: 16 }}>
+                <p style={{ color: '#389e0d', fontWeight: 600 }}>Your file is ready.</p>
+                <Button type="primary" icon={<DownloadOutlined />} block onClick={triggerFileDownload}>
+                  Download
+                </Button>
+                <p style={{ fontSize: 12, color: '#999', marginTop: 12 }}>
+                  If the download doesn&apos;t start, the file opens in a new tab where you can save it.
+                  Availability depends on the selected server &mdash; try another server if it fails.
+                </p>
+              </div>
+            )}
+          </div>
+        </Modal>
       </Content>
     </Layout>
   );
