@@ -564,7 +564,6 @@ const DetailPage = () => {
                   allowFullScreen
                   title="External Stream"
                   referrerPolicy="origin"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   style={{
                     width: '100%',
                     height: isMobile ? '300px' : '600px',
